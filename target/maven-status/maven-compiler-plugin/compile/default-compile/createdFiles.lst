@@ -1,0 +1,8 @@
+com/shipmodel/config/SwaggerConfig.class
+com/shipmodel/dto/TextureMappingResponse.class
+com/shipmodel/Application.class
+com/shipmodel/controller/ShipModelController.class
+com/shipmodel/config/WebConfig.class
+com/shipmodel/dto/TextureMappingRequest.class
+com/shipmodel/service/BlenderService.class
+com/shipmodel/service/impl/BlenderServiceImpl.class

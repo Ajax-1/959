@@ -1,0 +1,1 @@
+java -jar texture-mapping-0.0.1-SNAPSHOT.jar --spring.config.location=file:"F:/Desktop/5_22_test_blender2.1 3/5_22_test_blender2.1/offline-deploy/offline-deploy/application.properties"
