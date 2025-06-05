@@ -9,7 +9,21 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+// 6.4
+import org.springframework.http.MediaType;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.Path;
+import java.io.FileOutputStream;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.Session;
+import com.jcraft.jsch.ChannelSftp;
+import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.SftpException;
+// 6.4
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -191,6 +205,74 @@ public class ShipModelController {
             
             // 返回500 Internal Server Error状态码和错误响应
             return ResponseEntity.status(500).body(response);
+        }
+    }
+
+    /**
+     * 图片代理API，用于访问SFTP上的图片
+     * @param path 图片在SFTP上的路径
+     * @return 图片字节数组
+     */
+    @GetMapping(value = "/api/images", produces = MediaType.IMAGE_JPEG_VALUE)
+    public ResponseEntity<byte[]> getImage(@RequestParam String path) {
+        try {
+            log.info("获取图片请求: {}", path);
+            
+            // 如果不是SFTP路径，返回错误
+            if (!path.startsWith("/mnt/")) {
+                log.error("非法路径: {}", path);
+                return ResponseEntity.badRequest().build();
+            }
+            
+            // 临时文件路径
+            String tempDir = System.getProperty("java.io.tmpdir");
+            String fileName = Paths.get(path).getFileName().toString();
+            Path localPath = Paths.get(tempDir, fileName);
+            
+            // 从SFTP下载文件
+            try {
+                // 创建SSH客户端
+                JSch jsch = new JSch();
+                Session session = jsch.getSession("root", "10.199.194.144", 5000);
+                session.setPassword("205064");
+                session.setConfig("StrictHostKeyChecking", "no");
+                session.connect();
+                
+                // 连接SFTP
+                ChannelSftp sftpChannel = (ChannelSftp) session.openChannel("sftp");
+                sftpChannel.connect();
+                
+                log.info("SFTP连接成功，开始下载图片: {} -> {}", path, localPath);
+                
+                // 下载文件
+                try (FileOutputStream fos = new FileOutputStream(localPath.toFile())) {
+                    sftpChannel.get(path, fos);
+                }
+                
+                // 关闭连接
+                sftpChannel.disconnect();
+                session.disconnect();
+                
+                log.info("图片下载成功: {}", localPath);
+                
+                // 读取图片并返回
+                byte[] imageBytes = Files.readAllBytes(localPath);
+                
+                // 设置响应头
+                HttpHeaders headers = new HttpHeaders();
+                headers.setCacheControl("max-age=3600");
+                
+                return ResponseEntity.ok()
+                        .headers(headers)
+                        .contentType(MediaType.IMAGE_JPEG)
+                        .body(imageBytes);
+            } catch (JSchException | SftpException | IOException e) {
+                log.error("图片访问失败: {}", e.getMessage(), e);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            }
+        } catch (Exception e) {
+            log.error("处理图片请求失败: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 } 

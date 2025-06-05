@@ -36,10 +36,10 @@ public class BlenderServiceImpl implements BlenderService {
     @Value("${blender.script.path}")
     private String blenderScriptPath;
     
-    @Value("${models.base.dir}")
+    @Value("${models.base.dir:}")
     private String modelsBaseDir;
     
-    @Value("${textures.base.dir}")
+    @Value("${textures.base.dir:}")
     private String texturesBaseDir;
     
     @Value("${output.models.dir}")
@@ -162,10 +162,12 @@ public class BlenderServiceImpl implements BlenderService {
             log.info("将生成的输出文件: {}", outputFilePath);
             
             // 构建完整URL或使用提供的路径
-            String fullModelPath = buildFullPath(modelPath);
-            String topTexturePath = buildFullPath(texturePaths.get(0));
-            String sideTexturePath = buildFullPath(texturePaths.get(1));
-            
+            // String fullModelPath = buildFullPath(modelPath);
+            // String topTexturePath = buildFullPath(texturePaths.get(0));
+            // String sideTexturePath = buildFullPath(texturePaths.get(1));
+            String fullModelPath = modelPath;
+            String topTexturePath = texturePaths.get(0);
+            String sideTexturePath = texturePaths.get(1);
             // 记录处理的文件路径
             log.info("处理的文件路径:");
             log.info("模型路径: {}", fullModelPath);
@@ -288,18 +290,20 @@ public class BlenderServiceImpl implements BlenderService {
      * @param path 原始路径
      * @return 构建后的完整路径
      */
+    // 在 buildFullPath 方法中添加SFTP路径识别 6.4
     private String buildFullPath(String path) {
         if (path.startsWith("http://") || path.startsWith("https://")) {
-            // 已经是完整URL，直接返回
+            // HTTP URL
+            return path;
+        } else if (path.startsWith("/mnt/")) {
+            // SFTP路径，直接返回
             return path;
         } else if (path.startsWith("/")) {
-            // 相对路径，添加服务器基础URL
+            // 其他绝对路径
             if (serverBaseUrl != null && !serverBaseUrl.isEmpty()) {
-                // 确保不会有重复的斜杠
                 return serverBaseUrl + (serverBaseUrl.endsWith("/") ? path.substring(1) : path);
             }
         }
-        // 返回原始路径
         return path;
     }
     

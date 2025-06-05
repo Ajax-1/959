@@ -3,7 +3,7 @@ import axios from 'axios'
 // 创建axios实例
 const service = axios.create({
   baseURL: 'http://localhost:8080', // 显式指定后端API地址
-  timeout: 10000 // 请求超时时间
+  timeout: 1000000 // 请求超时时间
 })
 
 // 请求拦截器

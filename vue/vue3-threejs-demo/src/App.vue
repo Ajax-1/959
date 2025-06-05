@@ -24,7 +24,7 @@ onMounted(() => {
   // 记录日志，表示组件挂载完成
   console.log('App mounted');
   // 初始化时调用纹理贴图函数加载默认模型
-  callTextureMapping();
+  //callTextureMapping();
 });
 
 // 新增 - 内网数据接口相关配置
@@ -70,7 +70,8 @@ const selectDate = (val: any) => {
 }
 
 // 日历当前选中的日期
-const calendarValue = ref(new Date('2023-10-01'));
+// 修改为
+const calendarValue = ref(new Date('2024-12-16'));
 
 // 模型URL地址
 const modelUrl = ref('');
@@ -84,8 +85,8 @@ const apiMessage = ref('');
 const textureDialogVisible = ref(false);
 // 纹理图片路径列表，使用ref使其成为响应式数据
 const texturePaths = ref([]);
-// 内网数据服务器基础地址
-const serverBaseUrl = ref('http://30.249.201.203/mnt/MT/MT_DATA/MT_Dat_DATA');
+// 内网数据服务器基础地址 6.4
+const serverBaseUrl = ref('http://localhost:8080');
 
 // 打开纹理预览对话框的函数
 const showTexturePreview = () => {
@@ -93,65 +94,98 @@ const showTexturePreview = () => {
   textureDialogVisible.value = true;
 };
 
+// 监听日期变化，获取内网数据新修改的（6.4）
+// 监听日期变化，获取内网数据
 // 监听日期变化，获取内网数据
 watch(
-  // 监听日期变化
   nowDate,
-  // 回调函数，接收新值和旧值
   async (newV, oldV) => {
-    // 只有当日期变化时才执行
     if (newV != oldV) {
-      // 获取日期对象
       let date = newV;
-      // 格式化年份
       const year = date.getFullYear();
-      // 格式化月份（补零）
       const month = (date.getMonth() + 1).toString().padStart(2, '0');
-      // 格式化日期（补零）
       const day = date.getDate().toString().padStart(2, '0');
-      // 组合完整日期字符串，格式为YYYYMMDD
       const formattedDate = `${year}${month}${day}`;
       
-      // 准备请求参数
       const postData = {
-        dateStr: formattedDate,  // 日期字符串
-        objType: "尼米兹级",      // 对象类型
+        dateStr: formattedDate,
+        objType: "nimizi",
       };
       
-      // 记录请求信息
       console.log('url', url.value);
       console.log('postData', postData);
       
+      // ========== 模拟数据库返回 ==========
+      // 根据不同的图像类型构建对应的路径
+      let imageType = 'PAN'; // 默认可见光
+      if (url.value.includes('sar')) {
+        imageType = 'SAR';
+      } else if (url.value.includes('irs')) {
+        imageType = 'IRS';
+      } else if (url.value.includes('pan')) {
+        imageType = 'PAN';
+      }
+      
+      // 模拟result数据
+      const mockResult = [
+        {
+          PanobjPath: `/mnt/MT/MT_DATA/MT_Out-Data/${imageType}/${formattedDate}/1.jpg`
+        },
+        {
+          PanobjPath: `/mnt/MT/MT_DATA/MT_Out-Data/${imageType}/${formattedDate}/2.jpg`
+        }
+      ];
+      
+      // 模拟API响应
+      const resultPost = {
+        result: mockResult,
+        retCode: 2000
+      };
+      
+      console.log('模拟的resultPost:', resultPost);
+      // ========== 模拟结束 ==========
+      
       try {
-        // 发送请求获取数据
-        const resultPost = await post(`${baseUrl}${url.value}`, postData);
-        // 记录返回结果
-        console.log('resultPost', resultPost);
+        // 注释掉真实的API调用
+        // const resultPost = await post(`${baseUrl}${url.value}`, postData);
         
-        // 解构获取结果和状态码
         const { result, retCode } = resultPost;
-        // 检查是否成功并有数据
         if (retCode == 2000 && result && result.length > 0) {
-          // 存储返回的数据
           reData.value = result;
-          // 提取PanobjPath字段，即图片路径
-          const paths = result.map(item => item.PanobjPath);
-          // 更新纹理路径列表
-          texturePaths.value = paths;
+          
+          // 提取所有图片路径
+          const allPaths = result.map(item => item.PanobjPath);
+          
+          // 只取前两张图片作为top和side纹理
+          if (allPaths.length >= 2) {
+            texturePaths.value = [
+              allPaths[0],  // 第一张作为top纹理（1.jpg）
+              allPaths[1]   // 第二张作为side纹理（2.jpg）
+            ];
+            console.log('选取的纹理路径:', texturePaths.value);
+          } else if (allPaths.length === 1) {
+            // 如果只有一张图片，复制使用
+            texturePaths.value = [allPaths[0], allPaths[0]];
+            ElMessage.warning('只找到一张图片，将同时用于顶视图和侧视图');
+          } else {
+            texturePaths.value = [];
+            ElMessage.warning('未找到图片数据');
+            return;
+          }
+          
+          // TODO: 未来这里可以从result中获取模型路径
+          // 例如: modelPath.value = result[0].ModelPath || generateDefaultModelPath();
           
           // 自动调用纹理贴图处理
           callTextureMapping();
         } else {
-          // 显示无数据提示
           ElMessage({
             message: '暂无数据',
             type: 'warning'
           });
         }
       } catch (error) {
-        // 记录错误信息
         console.error('获取数据失败:', error);
-        // 显示错误提示
         ElMessage({
           message: '获取数据失败',
           type: 'error'
@@ -159,7 +193,6 @@ watch(
       }
     }
   },
-  // 配置深度监听
   { deep: true }
 );
 
@@ -169,102 +202,67 @@ watch(calendarValue, (newVal) => {
   nowDate.value = newVal;
 });
 
-// 船舶纹理贴图API调用 - 修改为使用内网真实数据
+// 船舶纹理贴图API调用 - 修改为使用内网真实数据 6.4
 const callTextureMapping = async () => {
-  // 设置加载状态为true
   isLoading.value = true;
-  // 更新处理状态消息
   apiMessage.value = '处理中...';
   
   try {
-    // 检查是否有纹理数据
     if (!texturePaths.value || texturePaths.value.length === 0) {
-      // 如果没有纹理数据，更新提示信息
       apiMessage.value = '暂无纹理数据，请先选择日期获取数据';
-      // 结束加载状态
       isLoading.value = false;
       return;
     }
     
-    // 准备请求参数，使用获取的真实数据路径
+    // 船型号到英文名的映射
+    const shipModelNameMap = {
+      "nimizi": "nimizi"
+      // 未来可以添加更多映射
+    };
+    
+    // 获取当前船型号（目前写死）
+    const shipType = "nimizi";
+    const shipModelName = shipModelNameMap[shipType] || "default";
+    
+    // 构建模型路径（目前写死，未来从数据库获取）
+    // TODO: 未来这个路径应该从数据库返回的 modelPath 字段获取
+    const modelPath = `/mnt/MT/MT_DATA/3d_recon_DATA/${shipType}/${shipModelName}.ply`;
+    
+    // 准备请求参数
     let param = {
-      shipModel: "/model/02_chuizhi.ply", // 模型路径保持不变
-      textureDate: texturePaths.value     // 使用从内网获取的真实路径
+      shipModel: modelPath,         // 模型路径
+      textureDate: texturePaths.value  // 纹理路径数组 [top, side]
     }
     
+    console.log('发送纹理贴图请求:', param);
+    
     try {
-      // 发送纹理贴图处理请求
       const res = await post('/api/ship/texture-mapping', param);
       
-      // 记录处理结果
       console.log('纹理贴图处理结果:', res);
       
-      // 检查处理是否成功
       if (res.success) {
-        // 构建后端服务器基础URL
         const baseUrl = 'http://localhost:8080';
-        
-        // 确保modelUrl正确构建，避免重复的斜杠
         const serverPath = res.modelUrl.startsWith('/') ? res.modelUrl : `/${res.modelUrl}`;
-        
-        // 添加时间戳参数，防止缓存
         const timestamp = new Date().getTime();
-        // 构建完整的模型URL
         modelUrl.value = `${baseUrl}${serverPath}?t=${timestamp}`;
         
-        // 记录URL构建信息
-        console.log('完整模型URL构建:', modelUrl.value);
-        console.log('模型路径检查:');
-        console.log('- 基础URL:', baseUrl);
-        console.log('- 服务器路径:', serverPath);
-        console.log('- 时间戳:', timestamp);
-        console.log('- 最终URL:', modelUrl.value);
-        
-        // 更新成功消息
+        console.log('完整模型URL:', modelUrl.value);
         apiMessage.value = res.message || '处理成功';
       } else {
-        // 更新失败消息
         apiMessage.value = res.message || '处理失败';
-        // 记录错误信息
         console.error('服务器返回错误:', res);
       }
     } catch (requestError: unknown) {
-      // 类型转换，以便访问错误属性
       const reqErr = requestError as ErrorWithResponse;
-      // 记录请求错误
       console.error('请求处理失败:', reqErr);
-      // 更新错误消息
       apiMessage.value = `请求失败: ${reqErr.message || '未知错误'}`;
-      
-      // 尝试检查路径配置
-      try {
-        console.log('尝试检查路径配置...');
-        // 调用路径检查API
-        const pathCheckRes = await get('/api/ship/check-paths');
-        // 记录检查结果
-        console.log('路径检查结果:', pathCheckRes);
-      } catch (pathCheckError: unknown) {
-        // 类型转换，以便访问错误属性
-        const pathErr = pathCheckError as ErrorWithResponse;
-        // 记录路径检查错误
-        console.error('路径检查失败:', pathErr);
-      }
     }
   } catch (error: unknown) {
-    // 类型转换，以便访问错误属性
     const err = error as ErrorWithResponse;
-    // 记录贴图处理错误
     console.error('纹理贴图处理失败:', err);
-    // 更新错误消息
     apiMessage.value = '请求失败，请检查服务器';
-    
-    // 显示更多错误信息以便调试
-    if (err.response) {
-      console.error('错误状态:', err.response.status);
-      console.error('错误数据:', err.response.data);
-    }
   } finally {
-    // 无论成功或失败，都结束加载状态
     isLoading.value = false;
   }
 }
@@ -375,8 +373,8 @@ const forceReloadModel = () => {
         <div class="texture-item" v-for="(path, index) in texturePaths" :key="index">
           <h3>纹理图片 {{ index + 1 }}</h3>
           <div class="image-container">
-            <!-- 拼接完整的图片URL -->
-            <img :src="`${serverBaseUrl}${path}`" :alt="`纹理图片 ${index + 1}`" />
+            <!-- 将SFTP路径转换为API路径 -->
+            <img :src="`/api/images?path=${encodeURIComponent(path)}`" :alt="`纹理图片 ${index + 1}`" />
           </div>
         </div>
       </div>

@@ -9,7 +9,9 @@ import urllib.request
 import tempfile
 import shutil
 import urllib.parse
-
+# 新添加的包
+import paramiko
+from urllib.parse import urlparse
 '''
 基于UI_V2-4.28_end版本开发的无界面版本
 '''
@@ -17,9 +19,80 @@ import urllib.parse
 # 设置日志记录
 logging.basicConfig(level=logging.INFO, format='[执行日志] %(message)s')
 logger = logging.getLogger(__name__)
-
+# === SFTP配置 ===
+# === SFTP配置 ===
+SFTP_HOST = "10.199.194.144"  # 修改为新服务器
+SFTP_PORT = 5000                 # 修改为标准SSH端口
+SFTP_USERNAME = "root"
+SFTP_PASSWORD = "123456"       # 修改为新密码
 
 # === 初始化函数定义 ===
+
+def download_from_sftp(remote_path, local_path):
+    """从SFTP服务器下载文件"""
+    try:
+        # 创建SSH客户端
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        
+        # 连接SFTP服务器
+        logger.info(f"连接SFTP服务器: {SFTP_HOST}:{SFTP_PORT}")
+        ssh.connect(SFTP_HOST, port=SFTP_PORT, username=SFTP_USERNAME, password=SFTP_PASSWORD)
+        
+        # 创建SFTP客户端
+        sftp = ssh.open_sftp()
+        
+        # 确保本地目录存在
+        os.makedirs(os.path.dirname(local_path), exist_ok=True)
+        
+        # 下载文件
+        logger.info(f"从SFTP下载: {remote_path} -> {local_path}")
+        sftp.get(remote_path, local_path)
+        
+        # 关闭连接
+        sftp.close()
+        ssh.close()
+        
+        logger.info(f"SFTP下载成功: {local_path}")
+        return local_path
+        
+    except Exception as e:
+        logger.error(f"SFTP下载失败: {str(e)}")
+        raise RuntimeError(f"SFTP下载失败: {str(e)}")
+
+def download_if_url(file_path):
+    """处理文件路径，支持HTTP和SFTP"""
+    if file_path.startswith(('http://', 'https://')):
+        # HTTP下载（保留原有逻辑）
+        try:
+            file_name = os.path.basename(urllib.parse.urlparse(file_path).path)
+            if not file_name:
+                file_name = "temp_" + str(hash(file_path))
+            
+            temp_dir = tempfile.gettempdir()
+            local_path = os.path.join(temp_dir, file_name)
+            
+            logger.info(f"从URL下载文件: {file_path} 到 {local_path}")
+            urllib.request.urlretrieve(file_path, local_path)
+            
+            logger.info(f"文件下载成功: {local_path}")
+            return local_path
+        except Exception as e:
+            logger.error(f"下载文件失败: {str(e)}")
+            raise RuntimeError(f"下载文件失败: {str(e)}")
+    
+    elif file_path.startswith('/mnt/'):
+        # SFTP路径
+        file_name = os.path.basename(file_path)
+        temp_dir = tempfile.gettempdir()
+        local_path = os.path.join(temp_dir, file_name)
+        
+        return download_from_sftp(file_path, local_path)
+    
+    else:
+        # 本地路径
+        return file_path
+    
 def project_from_view_manual(obj, camera):
     """基于透视相机进行精确UV投影"""
     logger.info(f"基于透视相机 {camera.name} 参数计算UV投影")
@@ -101,7 +174,6 @@ def project_from_view_manual(obj, camera):
     bmesh.update_edit_mesh(mesh)
     logger.info("UV投影计算完成")
 
-
 def setup_material_with_texture(obj, material_index, texture_path):
     """设置材质并应用纹理"""
     # 获取材质
@@ -136,32 +208,6 @@ def setup_material_with_texture(obj, material_index, texture_path):
 
     logger.info(f"已应用纹理 {texture_path} 到材质 {mat.name}")
     return mat
-
-def download_if_url(file_path):
-    """如果路径是URL则下载文件，返回本地路径"""
-    if file_path.startswith(('http://', 'https://')):
-        try:
-            # 创建临时文件名
-            file_name = os.path.basename(urllib.parse.urlparse(file_path).path)
-            # 确保文件名不为空
-            if not file_name:
-                file_name = "temp_" + str(hash(file_path))
-            
-            temp_dir = tempfile.gettempdir()
-            local_path = os.path.join(temp_dir, file_name)
-            
-            # 下载文件
-            logger.info(f"从URL下载文件: {file_path} 到 {local_path}")
-            urllib.request.urlretrieve(file_path, local_path)
-            
-            logger.info(f"文件下载成功: {local_path}")
-            return local_path
-        except Exception as e:
-            logger.error(f"下载文件失败: {str(e)}")
-            raise RuntimeError(f"下载文件失败: {str(e)}")
-    else:
-        # 已经是本地路径
-        return file_path
 
 # === 主脚本开始 ===
 logger.info("开始执行无界面Blender脚本...")

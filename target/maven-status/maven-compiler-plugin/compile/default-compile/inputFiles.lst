@@ -1,8 +1,8 @@
-/Users/ajax/Desktop/YJS/5_22_test_blender2.1/src/main/java/com/shipmodel/config/WebConfig.java
-/Users/ajax/Desktop/YJS/5_22_test_blender2.1/src/main/java/com/shipmodel/service/BlenderService.java
-/Users/ajax/Desktop/YJS/5_22_test_blender2.1/src/main/java/com/shipmodel/dto/TextureMappingResponse.java
-/Users/ajax/Desktop/YJS/5_22_test_blender2.1/src/main/java/com/shipmodel/config/SwaggerConfig.java
-/Users/ajax/Desktop/YJS/5_22_test_blender2.1/src/main/java/com/shipmodel/service/impl/BlenderServiceImpl.java
-/Users/ajax/Desktop/YJS/5_22_test_blender2.1/src/main/java/com/shipmodel/Application.java
-/Users/ajax/Desktop/YJS/5_22_test_blender2.1/src/main/java/com/shipmodel/controller/ShipModelController.java
-/Users/ajax/Desktop/YJS/5_22_test_blender2.1/src/main/java/com/shipmodel/dto/TextureMappingRequest.java
+/Users/ajax/Desktop/959/5_22_test_blender2.1/src/main/java/com/shipmodel/service/BlenderService.java
+/Users/ajax/Desktop/959/5_22_test_blender2.1/src/main/java/com/shipmodel/service/impl/BlenderServiceImpl.java
+/Users/ajax/Desktop/959/5_22_test_blender2.1/src/main/java/com/shipmodel/config/SwaggerConfig.java
+/Users/ajax/Desktop/959/5_22_test_blender2.1/src/main/java/com/shipmodel/controller/ShipModelController.java
+/Users/ajax/Desktop/959/5_22_test_blender2.1/src/main/java/com/shipmodel/dto/TextureMappingResponse.java
+/Users/ajax/Desktop/959/5_22_test_blender2.1/src/main/java/com/shipmodel/Application.java
+/Users/ajax/Desktop/959/5_22_test_blender2.1/src/main/java/com/shipmodel/config/WebConfig.java
+/Users/ajax/Desktop/959/5_22_test_blender2.1/src/main/java/com/shipmodel/dto/TextureMappingRequest.java
